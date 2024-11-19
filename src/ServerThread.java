@@ -4,13 +4,22 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 
+/**
+ * Représente un thread pour gérer la communication avec un client.
+ */
 public class ServerThread implements Runnable {
 
-	private Socket socket;
-	private ServerMain server_main;
-	private String clientName;
-	private boolean broadcastMode = false; // Flag to check if client is in broadcast mode
+	private Socket socket; // Socket associé au client
+	private ServerMain server_main; // Instance du serveur principal
+	private String clientName; // Nom du client
+	private boolean broadcastMode = false; // Indique si le client est en mode broadcast
 
+	/**
+	 * Constructeur pour initialiser le thread client.
+	 *
+	 * @param socket       le socket du client
+	 * @param server_main  l'instance du serveur principal
+	 */
 	public ServerThread(Socket socket, ServerMain server_main) {
 		this.socket = socket;
 		this.server_main = server_main;
@@ -19,21 +28,20 @@ public class ServerThread implements Runnable {
 	@Override
 	public void run() {
 		try {
-			int client_number = server_main.getClientNumber();
-
+			int client_number = server_main.getClientNumber(); // Numéro unique pour chaque client
 			System.out.println("Client " + client_number + " has connected.");
 
-			// I/O buffers
+			// Flux de communication
 			BufferedReader in_socket = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			PrintWriter out_socket = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
 
-			// Ask the client for their name
+			// Demande du nom du client
 			out_socket.println("Welcome! You are client number " + client_number + ". What's your name?");
 			clientName = in_socket.readLine();
-			server_main.addClient(clientName, this); // Add client to the list
+			server_main.addClient(clientName, this); // Ajoute le client à la liste gérée par le serveur
 			System.out.println("Client " + client_number + " is named: " + clientName);
 
-			// Loop for chat
+			// Boucle principale de chat
 			while (true) {
 				if (!broadcastMode) {
 					out_socket.println("Hello " + clientName + ", what do you want to say?");
@@ -41,33 +49,30 @@ public class ServerThread implements Runnable {
 					out_socket.println("You are in broadcast mode. Your message will be sent to all clients.");
 				}
 
-				String clientMessage = in_socket.readLine();
+				String clientMessage = in_socket.readLine(); // Message reçu du client
 
+				// Gestion des commandes spécifiques
 				if (clientMessage == null || clientMessage.equalsIgnoreCase("exit")) {
-					break;
+					break; // Déconnexion du client
 				} else if (clientMessage.equalsIgnoreCase("list")) {
-					// If the client types "list", show all connected clients
-					out_socket.println(server_main.getClientsList());
+					out_socket.println(server_main.getClientsList()); // Liste des clients connectés
 				} else if (clientMessage.equalsIgnoreCase("all")) {
-					// Switch to broadcast mode
-					broadcastMode = true;
-					out_socket.println("You are now in broadcast mode. All your messages will be sent to all clients.");
+					broadcastMode = true; // Mode broadcast activé
+					out_socket.println("You are now in broadcast mode.");
 				} else if (clientMessage.equalsIgnoreCase("private")) {
-					// Switch back to private mode
-					broadcastMode = false;
-					out_socket.println("You are now in private mode. Messages will only be sent to the server.");
+					broadcastMode = false; // Mode privé activé
+					out_socket.println("You are now in private mode.");
 				} else if (clientMessage.startsWith("@")) {
-					// Private message logic
+					// Envoi d'un message privé à un autre client
 					String[] parts = clientMessage.split(" ", 2);
 					if (parts.length < 2) {
 						out_socket.println("Invalid private message format. Use @ClientName message.");
 						continue;
 					}
-					String targetClient = parts[0].substring(1); // Extract client name
-					String privateMessage = parts[1]; // Extract message
+					String targetClient = parts[0].substring(1); // Nom du destinataire
+					String privateMessage = parts[1]; // Contenu du message
 
 					ServerThread targetThread = server_main.getClientThread(targetClient);
-
 					if (targetThread != null) {
 						targetThread.sendMessage("Private message from " + clientName + ": " + privateMessage);
 						out_socket.println("Private message sent to " + targetClient + ".");
@@ -76,18 +81,16 @@ public class ServerThread implements Runnable {
 					}
 				} else {
 					if (broadcastMode) {
-						// If in broadcast mode, send the message to all clients including logging on the server
-						System.out.println("Broadcast from " + clientName + ": " + clientMessage); // Log on server
-						server_main.broadcastMessage(clientMessage, clientName); // Send to all clients
+						System.out.println("Broadcast from " + clientName + ": " + clientMessage); // Log
+						server_main.broadcastMessage(clientMessage, clientName); // Message diffusé à tous
 					} else {
-						// Normal private message to server
 						System.out.println("Client " + clientName + " says: " + clientMessage);
 					}
 				}
 			}
 
-			// Remove client from the list and close socket
-			server_main.removeClient(clientName);
+			// Déconnexion et nettoyage
+			server_main.removeClient(clientName); // Supprime le client de la liste
 			socket.close();
 			System.out.println("Client " + clientName + " has disconnected.");
 
@@ -96,12 +99,20 @@ public class ServerThread implements Runnable {
 		}
 	}
 
-	// Getter for clientName
+	/**
+	 * Retourne le nom du client.
+	 *
+	 * @return le nom du client
+	 */
 	public String getClientName() {
 		return clientName;
 	}
 
-	// Method to send a message to this client
+	/**
+	 * Envoie un message à ce client.
+	 *
+	 * @param message le message à envoyer
+	 */
 	public void sendMessage(String message) {
 		try {
 			PrintWriter out_socket = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
