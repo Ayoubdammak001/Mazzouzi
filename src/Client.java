@@ -24,7 +24,6 @@ public class Client {
 					String serverMessage = in_socket.readLine();
 					if (serverMessage == null) break;
 					System.out.println("\n" + serverMessage);
-					System.out.print("You: ");
 				}
 			} catch (Exception e) {
 				System.out.println("Connection lost: " + e.getMessage());
