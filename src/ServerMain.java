@@ -68,4 +68,11 @@ public class ServerMain {
             e.printStackTrace();
         }
     }
+
+    public ServerThread getClientThread(String clientName) {
+        synchronized (clients) {
+            return clients.get(clientName);
+        }
+    }
+
 }

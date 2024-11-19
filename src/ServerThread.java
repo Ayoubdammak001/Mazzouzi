@@ -9,7 +9,7 @@ public class ServerThread implements Runnable {
 	private Socket socket;
 	private ServerMain server_main;
 	private String clientName;
-	private boolean broadcastMode = false;  // Flag to check if client is in broadcast mode
+	private boolean broadcastMode = false; // Flag to check if client is in broadcast mode
 
 	public ServerThread(Socket socket, ServerMain server_main) {
 		this.socket = socket;
@@ -56,11 +56,29 @@ public class ServerThread implements Runnable {
 					// Switch back to private mode
 					broadcastMode = false;
 					out_socket.println("You are now in private mode. Messages will only be sent to the server.");
+				} else if (clientMessage.startsWith("@")) {
+					// Private message logic
+					String[] parts = clientMessage.split(" ", 2);
+					if (parts.length < 2) {
+						out_socket.println("Invalid private message format. Use @ClientName message.");
+						continue;
+					}
+					String targetClient = parts[0].substring(1); // Extract client name
+					String privateMessage = parts[1]; // Extract message
+
+					ServerThread targetThread = server_main.getClientThread(targetClient);
+
+					if (targetThread != null) {
+						targetThread.sendMessage("Private message from " + clientName + ": " + privateMessage);
+						out_socket.println("Private message sent to " + targetClient + ".");
+					} else {
+						out_socket.println("Client " + targetClient + " not found.");
+					}
 				} else {
 					if (broadcastMode) {
 						// If in broadcast mode, send the message to all clients including logging on the server
-						System.out.println("Broadcast from " + clientName + ": " + clientMessage);  // Log on server
-						server_main.broadcastMessage(clientMessage, clientName);  // Send to all clients
+						System.out.println("Broadcast from " + clientName + ": " + clientMessage); // Log on server
+						server_main.broadcastMessage(clientMessage, clientName); // Send to all clients
 					} else {
 						// Normal private message to server
 						System.out.println("Client " + clientName + " says: " + clientMessage);
